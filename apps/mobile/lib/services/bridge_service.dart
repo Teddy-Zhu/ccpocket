@@ -9,6 +9,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../core/logger.dart';
 import '../models/messages.dart';
+import '../utils/git_path_utils.dart';
 import 'bridge_service_base.dart';
 
 class ExplorerHistorySnapshot {
@@ -290,7 +291,9 @@ class BridgeService implements BridgeServiceBase {
               case FileContentMessage():
                 _fileContentController.add(msg);
               case FileListMessage(:final files):
-                _fileListController.add(files);
+                _fileListController.add(
+                  files.map(normalizeGitPathSpec).toList(growable: false),
+                );
               case ProjectHistoryMessage(:final projects):
                 _projectHistory = projects;
                 _projectHistoryController.add(projects);

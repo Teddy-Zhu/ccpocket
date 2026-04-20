@@ -442,5 +442,36 @@ void main() {
       expect(restored, isNotNull);
       expect(restored!.model, defaultCodexModels.first);
     });
+
+    test(
+      'infers legacy codex model and reasoning overrides from saved defaults',
+      () {
+        final restored = sessionStartDefaultsFromJson({
+          'projectPath': '/tmp/project-legacy',
+          'provider': Provider.codex.value,
+          'model': 'gpt-5.4',
+          'modelReasoningEffort': 'xhigh',
+        });
+
+        expect(restored, isNotNull);
+        expect(restored!.codexModelOverridden, isTrue);
+        expect(restored.codexReasoningEffortOverridden, isTrue);
+
+        final params = restored.copyWith(codexProfile: 'ccpocket');
+        expect(codexModelForSessionStart(params), 'gpt-5.4');
+        expect(codexReasoningEffortForSessionStart(params), 'xhigh');
+      },
+    );
+
+    test('keeps legacy default high reasoning as non-override', () {
+      final restored = sessionStartDefaultsFromJson({
+        'projectPath': '/tmp/project-legacy-default',
+        'provider': Provider.codex.value,
+        'modelReasoningEffort': 'high',
+      });
+
+      expect(restored, isNotNull);
+      expect(restored!.codexReasoningEffortOverridden, isFalse);
+    });
   });
 }

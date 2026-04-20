@@ -166,6 +166,77 @@ describe("CodexProcess (app-server)", () => {
     proc.stop();
   });
 
+  it("forwards requested reasoning effort with profile to thread/start and turn/start", async () => {
+    const proc = new CodexProcess("linux");
+
+    proc.start("/tmp/project-profile-effort", {
+      profile: "ccpocket",
+      sandboxMode: "workspace-write",
+      approvalPolicy: "on-request",
+      model: "gpt-5.4",
+      modelReasoningEffort: "xhigh",
+    });
+
+    const child = fakeChildren[0];
+    await tick();
+
+    const initReq = nextOutgoingRequest(child);
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({ id: initReq.id, result: {} })}\n`,
+    );
+
+    await tick();
+    nextOutgoingNotification(child); // initialized
+
+    const startReq = nextOutgoingRequest(child);
+    expect(startReq.method).toBe("thread/start");
+    expect(startReq.params).toMatchObject({
+      cwd: "/tmp/project-profile-effort",
+      approvalPolicy: "on-request",
+      sandbox: "workspace-write",
+      model: "gpt-5.4",
+      config: {
+        profile: "ccpocket",
+        model_reasoning_effort: "xhigh",
+      },
+    });
+
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({
+        id: startReq.id,
+        result: {
+          thread: { id: "thr_effort" },
+          model: "gpt-5.4",
+          reasoningEffort: "xhigh",
+        },
+      })}\n`,
+    );
+
+    await tick();
+    drainSkillsList(child);
+
+    proc.sendInput("continue");
+    await tick();
+
+    const turnReq = nextOutgoingRequest(child);
+    expect(turnReq.method).toBe("turn/start");
+    expect(turnReq.params).toMatchObject({
+      model: "gpt-5.4",
+      effort: "xhigh",
+      collaborationMode: {
+        mode: "default",
+        settings: {
+          model: "gpt-5.4",
+          reasoning_effort: "xhigh",
+        },
+      },
+    });
+
+    proc.stop();
+  });
+
   it("uses cmd.exe to launch codex app-server on Windows", () => {
     const proc = new CodexProcess("win32");
 

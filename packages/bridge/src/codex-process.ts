@@ -852,10 +852,13 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
         experimentalRawEvents: false,
         persistExtendedHistory: true,
       };
+      // thread/start and thread/resume don't accept top-level `effort`.
+      // Reasoning overrides must be passed through config.model_reasoning_effort.
+      const threadConfig: Record<string, unknown> = {};
       const requestedModel = sanitizeCodexModel(options?.model);
       if (requestedModel) threadParams.model = requestedModel;
       if (options?.modelReasoningEffort) {
-        threadParams.effort = normalizeReasoningEffort(
+        threadConfig.model_reasoning_effort = normalizeReasoningEffort(
           options.modelReasoningEffort,
         );
       }
@@ -879,9 +882,12 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
         threadParams.persistExtendedHistory = true;
       }
       if (options?.profile) {
+        threadConfig.profile = options.profile;
+      }
+      if (Object.keys(threadConfig).length > 0) {
         threadParams.config = {
-          profile: options.profile,
           ...(threadParams.config as Record<string, unknown> | undefined),
+          ...threadConfig,
         };
       }
 

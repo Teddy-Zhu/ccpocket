@@ -250,13 +250,26 @@ Map<String, dynamic> sessionStartDefaultsToJson(NewSessionParams params) {
 NewSessionParams? sessionStartDefaultsFromJson(Map<String, dynamic> json) {
   final projectPath = json['projectPath'] as String?;
   if (projectPath == null || projectPath.isEmpty) return null;
+  final provider = _providerFromRaw(json['provider'] as String?);
   final codexModel = normalizeCodexModelForAvailableList(
     json['model'] as String?,
     _defaultCodexModels,
   );
+  final modelReasoningEffort = reasoningEffortFromRaw(
+    json['modelReasoningEffort'] as String?,
+  );
+  final legacyCodexModelOverridden =
+      provider == Provider.codex &&
+      !json.containsKey('codexModelOverridden') &&
+      ((codexModel ?? json['model'] as String?)?.trim().isNotEmpty ?? false);
+  final legacyCodexReasoningEffortOverridden =
+      provider == Provider.codex &&
+      !json.containsKey('codexReasoningEffortOverridden') &&
+      modelReasoningEffort != null &&
+      modelReasoningEffort != ReasoningEffort.high;
   return NewSessionParams(
     projectPath: projectPath,
-    provider: _providerFromRaw(json['provider'] as String?),
+    provider: provider,
     claudePermissionMode: permissionModeFromRaw(
       json['permissionMode'] as String?,
     ),
@@ -270,9 +283,11 @@ NewSessionParams? sessionStartDefaultsFromJson(Map<String, dynamic> json) {
         codexApprovalPolicyFromLegacyExecutionMode(
           json['executionMode'] as String?,
         ),
-    codexModelOverridden: json['codexModelOverridden'] as bool? ?? false,
+    codexModelOverridden:
+        json['codexModelOverridden'] as bool? ?? legacyCodexModelOverridden,
     codexReasoningEffortOverridden:
-        json['codexReasoningEffortOverridden'] as bool? ?? false,
+        json['codexReasoningEffortOverridden'] as bool? ??
+        legacyCodexReasoningEffortOverridden,
     planMode: derivePlanMode(
       planMode: json['planMode'] as bool?,
       permissionMode: json['permissionMode'] as String?,
@@ -280,9 +295,7 @@ NewSessionParams? sessionStartDefaultsFromJson(Map<String, dynamic> json) {
     // useWorktree, worktreeBranch, existingWorktreePath default to off/null
     model: codexModel ?? json['model'] as String?,
     sandboxMode: sandboxModeFromRaw(json['sandboxMode'] as String?),
-    modelReasoningEffort: reasoningEffortFromRaw(
-      json['modelReasoningEffort'] as String?,
-    ),
+    modelReasoningEffort: modelReasoningEffort,
     networkAccessEnabled: json['networkAccessEnabled'] as bool?,
     webSearchMode: webSearchModeFromRaw(json['webSearchMode'] as String?),
     claudeModel: json['claudeModel'] as String?,

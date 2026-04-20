@@ -318,7 +318,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get codexProfilePrecedenceNote =>
-      '如果所选 profile 定义了相同设置，则 profile 设置会优先于下方选项。';
+      'Profile 作为基础配置。当前会话的模型和 Reasoning 仍以下方选择为准。';
 
   @override
   String get maxTurns => '最大轮数';

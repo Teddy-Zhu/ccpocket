@@ -225,6 +225,8 @@ Map<String, dynamic> sessionStartDefaultsToJson(NewSessionParams params) {
     'provider': params.provider.value,
     'executionMode': params.executionMode.value,
     'codexApprovalPolicy': params.codexApprovalPolicy.value,
+    'codexModelOverridden': params.codexModelOverridden,
+    'codexReasoningEffortOverridden': params.codexReasoningEffortOverridden,
     'planMode': params.planMode,
     'permissionMode': params.permissionMode.value,
     // NOTE: useWorktree, worktreeBranch, existingWorktreePath are
@@ -268,6 +270,9 @@ NewSessionParams? sessionStartDefaultsFromJson(Map<String, dynamic> json) {
         codexApprovalPolicyFromLegacyExecutionMode(
           json['executionMode'] as String?,
         ),
+    codexModelOverridden: json['codexModelOverridden'] as bool? ?? false,
+    codexReasoningEffortOverridden:
+        json['codexReasoningEffortOverridden'] as bool? ?? false,
     planMode: derivePlanMode(
       planMode: json['planMode'] as bool?,
       permissionMode: json['permissionMode'] as String?,

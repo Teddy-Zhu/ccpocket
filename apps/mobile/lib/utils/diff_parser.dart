@@ -1,5 +1,6 @@
 // Unified diff parser — converts raw `git diff` output into structured data.
 
+import 'dart:convert';
 import 'dart:typed_data';
 
 enum DiffLineType { context, addition, deletion }
@@ -262,12 +263,8 @@ DiffFile _parseSingleFileDiff(List<String> lines) {
 
   // Try to extract path from --- / +++ lines
   for (final line in lines) {
-    if (line.startsWith('+++ b/')) {
-      filePath = line.substring(6);
-      break;
-    }
     if (line.startsWith('+++ ') && !line.startsWith('+++ /dev/null')) {
-      filePath = line.substring(4);
+      filePath = _normalizeGitPathSpec(line.substring(4));
       break;
     }
   }
@@ -674,11 +671,120 @@ void _writeFileHeader(StringBuffer buffer, DiffFile file) {
 
 /// Extract file path from `diff --git a/path b/path`.
 String _extractFilePath(String diffGitLine) {
-  // Format: diff --git a/some/path b/some/path
-  final parts = diffGitLine.split(' b/');
-  if (parts.length >= 2) {
-    return parts.last;
+  final content = diffGitLine.replaceFirst('diff --git ', '');
+  final specs = _splitGitPathSpecs(content);
+  if (specs.length >= 2) {
+    return _normalizeGitPathSpec(specs[1]);
   }
-  // Fallback: remove prefix
-  return diffGitLine.replaceFirst('diff --git ', '').split(' ').last;
+  if (specs.isNotEmpty) {
+    return _normalizeGitPathSpec(specs.last);
+  }
+  return '';
+}
+
+List<String> _splitGitPathSpecs(String text) {
+  final specs = <String>[];
+  var index = 0;
+
+  while (index < text.length && specs.length < 2) {
+    while (index < text.length && text[index] == ' ') {
+      index++;
+    }
+    if (index >= text.length) break;
+
+    if (text[index] == '"') {
+      final start = index;
+      index++;
+      while (index < text.length) {
+        final char = text[index];
+        if (char == '"') {
+          index++;
+          break;
+        }
+        if (char == '\\' && index + 1 < text.length) {
+          index += 2;
+          continue;
+        }
+        index++;
+      }
+      specs.add(text.substring(start, index));
+      continue;
+    }
+
+    final start = index;
+    while (index < text.length && text[index] != ' ') {
+      index++;
+    }
+    specs.add(text.substring(start, index));
+  }
+
+  return specs;
+}
+
+String _normalizeGitPathSpec(String rawSpec) {
+  var spec = rawSpec.trim();
+  if (spec.isEmpty) return spec;
+
+  if (spec.startsWith('"') && spec.endsWith('"') && spec.length >= 2) {
+    spec = _decodeGitQuotedPath(spec.substring(1, spec.length - 1));
+  }
+
+  if (spec.startsWith('a/') || spec.startsWith('b/')) {
+    return spec.substring(2);
+  }
+  return spec;
+}
+
+String _decodeGitQuotedPath(String value) {
+  final bytes = <int>[];
+  var index = 0;
+
+  while (index < value.length) {
+    final char = value[index];
+    if (char != '\\') {
+      bytes.addAll(utf8.encode(char));
+      index++;
+      continue;
+    }
+
+    if (index + 1 >= value.length) {
+      bytes.add('\\'.codeUnitAt(0));
+      break;
+    }
+
+    final next = value[index + 1];
+    final end = index + 4 <= value.length ? index + 4 : value.length;
+    final octalMatch = RegExp(
+      r'^[0-7]{1,3}',
+    ).firstMatch(value.substring(index + 1, end));
+    if (octalMatch case final match?) {
+      bytes.add(int.parse(match.group(0)!, radix: 8));
+      index += 1 + match.group(0)!.length;
+      continue;
+    }
+
+    switch (next) {
+      case 'n':
+        bytes.add('\n'.codeUnitAt(0));
+        break;
+      case 'r':
+        bytes.add('\r'.codeUnitAt(0));
+        break;
+      case 't':
+        bytes.add('\t'.codeUnitAt(0));
+        break;
+      case '"':
+        bytes.add('"'.codeUnitAt(0));
+        break;
+      case '\\':
+        bytes.add('\\'.codeUnitAt(0));
+        break;
+      default:
+        bytes.addAll(utf8.encode(next));
+        break;
+    }
+    index += 2;
+  }
+
+  return utf8.decode(bytes, allowMalformed: true);
 }

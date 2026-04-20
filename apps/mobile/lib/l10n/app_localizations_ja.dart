@@ -320,7 +320,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get codexProfilePrecedenceNote =>
-      'Profile で同じ設定を指定している場合は、以下の項目より Profile の設定が優先されます。';
+      'Profile はベース設定です。このセッションの Model / Reasoning は以下の選択が適用されます。';
 
   @override
   String get maxTurns => 'Max Turns';

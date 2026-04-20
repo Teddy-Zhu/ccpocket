@@ -1177,13 +1177,20 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
 
         // Always send collaborationMode so the server switches modes correctly.
         // Omitting it causes the server to persist the previous turn's mode.
+        // Also always include reasoning_effort in modeSettings so that Codex
+        // JSONL records it under collaboration_mode.settings.reasoning_effort.
+        // sessions-index.ts reads from that field when building session history,
+        // so omitting it causes resume to lose the user's effort choice and fall
+        // back to the SDK default (medium).
         const modeSettings: Record<string, unknown> = {
           model:
             requestedModel
             || sanitizeCodexModel(this.startModel)
             || "gpt-5.4",
         };
-        if (this._collaborationMode === "plan") {
+        if (options?.modelReasoningEffort) {
+          modeSettings.reasoning_effort = options.modelReasoningEffort;
+        } else if (this._collaborationMode === "plan") {
           modeSettings.reasoning_effort = "medium";
         }
         params.collaborationMode = {
@@ -2226,12 +2233,7 @@ function normalizeSandboxMode(value: CodexStartOptions["sandboxMode"]): string {
 function normalizeReasoningEffort(
   value: NonNullable<CodexStartOptions["modelReasoningEffort"]>,
 ): string {
-  switch (value) {
-    case "xhigh":
-      return "high";
-    default:
-      return value;
-  }
+  return value;
 }
 
 function sanitizeCodexModel(value: unknown): string | undefined {

@@ -42,7 +42,16 @@ diff --git a/file_c.dart b/file_c.dart
 @@ -1,2 +1,2 @@
 -removed
 +replaced
- end
+end
+''';
+
+const _quotedChinesePathDiff = r'''
+diff --git "a/docs/dev/prepare/\344\270\255\346\226\207.md" "b/docs/dev/prepare/\344\270\255\346\226\207.md"
+--- "a/docs/dev/prepare/\344\270\255\346\226\207.md"
++++ "b/docs/dev/prepare/\344\270\255\346\226\207.md"
+@@ -1 +1 @@
+-old
++new
 ''';
 
 /// Large diff with many files for stress testing.
@@ -470,6 +479,36 @@ void main() {
         'file_c.dart',
       });
     });
+
+    test(
+      'stageAll sends decoded chinese file paths from quoted git diff',
+      () async {
+        final mockBridge = MockDiffBridgeService();
+        final cubit = GitViewCubit(
+          bridge: mockBridge,
+          projectPath: '/home/user/project',
+        );
+        addTearDown(() {
+          cubit.close();
+          mockBridge.dispose();
+        });
+
+        mockBridge.emitDiff(
+          const DiffResultMessage(diff: _quotedChinesePathDiff),
+        );
+        await Future.microtask(() {});
+
+        expect(cubit.state.files.single.filePath, 'docs/dev/prepare/中文.md');
+
+        cubit.stageAll();
+        final json =
+            jsonDecode(mockBridge.sentMessages.last.toJson())
+                as Map<String, dynamic>;
+
+        expect(json['type'], 'git_stage');
+        expect(json['files'], ['docs/dev/prepare/中文.md']);
+      },
+    );
 
     test('successful stage result triggers refresh', () async {
       final mockBridge = MockDiffBridgeService();

@@ -234,7 +234,7 @@ void main() {
       );
       expect(
         find.text(
-          'If the selected profile includes the same setting, it takes precedence over the options below.',
+          "Profile provides base defaults. This session's Model and Reasoning selections below still apply.",
         ),
         findsOneWidget,
       );

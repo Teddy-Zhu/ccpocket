@@ -140,7 +140,7 @@
   "modelOptional": "モデル（任意）",
   "effort": "Effort",
   "defaultLabel": "デフォルト",
-  "codexProfilePrecedenceNote": "Profile で同じ設定を指定している場合は、以下の項目より Profile の設定が優先されます。",
+  "codexProfilePrecedenceNote": "Profile はベース設定です。このセッションの Model / Reasoning は以下の選択が適用されます。",
   "maxTurns": "Max Turns",
   "maxTurnsHint": "例: 8",
   "maxTurnsError": "1以上の整数を入力してください",

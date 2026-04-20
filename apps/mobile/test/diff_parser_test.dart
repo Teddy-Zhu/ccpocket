@@ -231,6 +231,22 @@ diff --git a/file.dart b/file.dart
       expect(files[0].hunks[0].oldStart, 1);
       expect(files[0].hunks[1].oldStart, 20);
     });
+
+    test('decodes quoted git paths with octal-escaped chinese characters', () {
+      const diff = r'''
+diff --git "a/docs/dev/prepare/\344\270\255\346\226\207.md" "b/docs/dev/prepare/\344\270\255\346\226\207.md"
+--- "a/docs/dev/prepare/\344\270\255\346\226\207.md"
++++ "b/docs/dev/prepare/\344\270\255\346\226\207.md"
+@@ -1 +1 @@
+-old
++new
+''';
+      final files = parseDiff(diff);
+
+      expect(files, hasLength(1));
+      expect(files.first.filePath, 'docs/dev/prepare/中文.md');
+      expect(files.first.hunks, hasLength(1));
+    });
   });
 
   group('DiffFile stats', () {

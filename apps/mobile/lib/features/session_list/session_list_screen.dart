@@ -124,6 +124,27 @@ List<RecentSession> filterByQuery(List<RecentSession> sessions, String query) {
   }).toList();
 }
 
+bool hasSelectedCodexProfile(String? profile) =>
+    profile != null && profile.trim().isNotEmpty;
+
+String? codexModelForSessionStart(NewSessionParams params) {
+  if (params.provider != Provider.codex) return null;
+  if (hasSelectedCodexProfile(params.codexProfile) &&
+      !params.codexModelOverridden) {
+    return null;
+  }
+  return params.model;
+}
+
+String? codexReasoningEffortForSessionStart(NewSessionParams params) {
+  if (params.provider != Provider.codex) return null;
+  if (hasSelectedCodexProfile(params.codexProfile) &&
+      !params.codexReasoningEffortOverridden) {
+    return null;
+  }
+  return params.modelReasoningEffort?.value;
+}
+
 // ---- Screen ----
 
 @RoutePage()
@@ -540,7 +561,7 @@ class _SessionListScreenState extends State<SessionListScreen>
     final bridge = context.read<BridgeService>();
     final useCodexProfile =
         result.provider == Provider.codex &&
-        (result.codexProfile?.isNotEmpty ?? false);
+        hasSelectedCodexProfile(result.codexProfile);
     _pendingResumeProjectPath = result.projectPath;
     _pendingResumeGitBranch = result.worktreeBranch;
     bridge.send(
@@ -582,14 +603,11 @@ class _SessionListScreenState extends State<SessionListScreen>
         profile: result.provider == Provider.codex ? result.codexProfile : null,
         model: result.provider == Provider.claude
             ? result.claudeModel
-            : (useCodexProfile ? null : result.model),
+            : codexModelForSessionStart(result),
         sandboxMode: result.provider == Provider.codex && useCodexProfile
             ? null
             : result.sandboxMode?.value,
-        modelReasoningEffort:
-            result.provider == Provider.codex && useCodexProfile
-            ? null
-            : result.modelReasoningEffort?.value,
+        modelReasoningEffort: codexReasoningEffortForSessionStart(result),
         networkAccessEnabled:
             result.provider == Provider.codex && useCodexProfile
             ? null
@@ -1075,7 +1093,7 @@ class _SessionListScreenState extends State<SessionListScreen>
 
     final isCodex = session.provider == Provider.codex.value;
     final useCodexProfile =
-        isCodex && (session.codexProfile?.isNotEmpty ?? false);
+        isCodex && hasSelectedCodexProfile(session.codexProfile);
 
     // For Claude sessions, prefer per-session settings over global defaults.
     Map<String, dynamic>? sessionSettings;
@@ -1162,10 +1180,8 @@ class _SessionListScreenState extends State<SessionListScreen>
       sandboxMode: isCodex
           ? (useCodexProfile ? null : session.codexSandboxMode)
           : sandboxMode,
-      model: isCodex ? (useCodexProfile ? null : codexModel) : claudeModel,
-      modelReasoningEffort: isCodex
-          ? (useCodexProfile ? null : session.codexModelReasoningEffort)
-          : null,
+      model: isCodex ? codexModel : claudeModel,
+      modelReasoningEffort: isCodex ? session.codexModelReasoningEffort : null,
       networkAccessEnabled: isCodex
           ? (useCodexProfile ? null : session.codexNetworkAccessEnabled)
           : null,
@@ -1217,7 +1233,7 @@ class _SessionListScreenState extends State<SessionListScreen>
 
     final isCodex = edited.provider == Provider.codex;
     final useCodexProfile =
-        isCodex && (edited.codexProfile?.isNotEmpty ?? false);
+        isCodex && hasSelectedCodexProfile(edited.codexProfile);
     context.read<BridgeService>().resumeSession(
       session.sessionId,
       resumeProjectPath,
@@ -1243,17 +1259,15 @@ class _SessionListScreenState extends State<SessionListScreen>
           ? null
           : edited.sandboxMode?.value,
       model: isCodex
-          ? (useCodexProfile
-                ? null
-                : (normalizeCodexModelForAvailableList(
-                        edited.model,
-                        context.read<BridgeService>().codexModels,
-                      ) ??
-                      edited.model))
+          ? (normalizeCodexModelForAvailableList(
+                  codexModelForSessionStart(edited),
+                  context.read<BridgeService>().codexModels,
+                ) ??
+                codexModelForSessionStart(edited))
           : edited.claudeModel,
-      modelReasoningEffort: isCodex && useCodexProfile
-          ? null
-          : (isCodex ? edited.modelReasoningEffort?.value : null),
+      modelReasoningEffort: isCodex
+          ? codexReasoningEffortForSessionStart(edited)
+          : null,
       networkAccessEnabled: isCodex && useCodexProfile
           ? null
           : (isCodex ? edited.networkAccessEnabled : null),

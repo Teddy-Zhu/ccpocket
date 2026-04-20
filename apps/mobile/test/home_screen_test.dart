@@ -306,6 +306,39 @@ void main() {
     });
   });
 
+  group('codex session overrides', () {
+    test('allows explicit model and reasoning with a selected profile', () {
+      final params = NewSessionParams(
+        projectPath: '/tmp/project-override',
+        provider: Provider.codex,
+        codexProfile: 'ccpocket',
+        model: 'gpt-5.4',
+        modelReasoningEffort: ReasoningEffort.xhigh,
+        codexModelOverridden: true,
+        codexReasoningEffortOverridden: true,
+      );
+
+      expect(codexModelForSessionStart(params), 'gpt-5.4');
+      expect(codexReasoningEffortForSessionStart(params), 'xhigh');
+    });
+
+    test(
+      'keeps profile defaults when model and reasoning were not overridden',
+      () {
+        final params = NewSessionParams(
+          projectPath: '/tmp/project-profile',
+          provider: Provider.codex,
+          codexProfile: 'ccpocket',
+          model: 'gpt-5.4',
+          modelReasoningEffort: ReasoningEffort.high,
+        );
+
+        expect(codexModelForSessionStart(params), isNull);
+        expect(codexReasoningEffortForSessionStart(params), isNull);
+      },
+    );
+  });
+
   group('session start defaults', () {
     test('serializes and restores codex defaults', () {
       final params = NewSessionParams(
@@ -316,8 +349,10 @@ void main() {
         worktreeBranch: 'feature/x',
         existingWorktreePath: '/tmp/project-a-worktrees/feature-x',
         model: 'gpt-5.3-codex',
+        codexModelOverridden: true,
         sandboxMode: SandboxMode.on,
         modelReasoningEffort: ReasoningEffort.high,
+        codexReasoningEffortOverridden: true,
         networkAccessEnabled: true,
         webSearchMode: WebSearchMode.live,
       );
@@ -333,6 +368,8 @@ void main() {
       expect(restored.existingWorktreePath, isNull);
       expect(restored.worktreeBranch, isNull);
       // Provider settings ARE persisted
+      expect(restored.codexModelOverridden, isTrue);
+      expect(restored.codexReasoningEffortOverridden, isTrue);
       expect(restored.webSearchMode, WebSearchMode.live);
     });
 
